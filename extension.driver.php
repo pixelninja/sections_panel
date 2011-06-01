@@ -53,7 +53,7 @@
 		public function dashboardPanelValidate($context) {
 			if ($context['type'] != 'section_to_table') return;
 
-			$context['errors']['section'] = __('Invalid section.');
+			//$context['errors']['section'] = __('Invalid section.');
 		}
 		
 		public function dashboardPanelOptions($context) {
@@ -160,15 +160,7 @@
 			
 			// Get section information:
 			$section = $sm->fetch($config['section']);
-			$fields = $section->fetchVisibleColumns();
-			$fields = array_splice(
-				$fields, 0,
-				(
-					isset($config['columns'])
-						? $config['columns']
-						: 4
-				)
-			);
+			$fields = $section->fetchFields();
 			$section_url = sprintf(
 				'%s/publish/%s/',
 				SYMPHONY_URL, $section->get('handle')
@@ -197,6 +189,8 @@
 			$table_head->appendChild($row);
 			
 			foreach ($fields as $field) {
+				if (!in_array($field->get('id'), $config['columns'])) continue;
+
 				$cell = new XMLElement('th');
 				$cell->setValue($field->get('label'));
 				$row->appendChild($cell);
@@ -209,6 +203,8 @@
 				$entry_url = $section_url . 'edit/' . $entry->get('id') . '/';
 				
 				foreach ($fields as $position => $field) {
+					if (!in_array($field->get('id'), $config['columns'])) continue;
+
 					$data = $entry->getData($field->get('id'));
 					$cell = new XMLElement('td');
 					$row->appendChild($cell);
