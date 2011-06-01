@@ -29,6 +29,11 @@
 			return array(
 				array(
 					'page'		=> '/backend/',
+					'delegate'	=> 'DashboardPanelValidate',
+					'callback'	=> 'dashboardPanelValidate'
+				),
+				array(
+					'page'		=> '/backend/',
 					'delegate'	=> 'DashboardPanelOptions',
 					'callback'	=> 'dashboardPanelOptions'
 				),
@@ -45,44 +50,86 @@
 			);
 		}
 		
+		public function dashboardPanelValidate($context) {
+			if ($context['type'] != 'section_to_table') return;
+
+			$context['errors']['section'] = __('Invalid section.');
+		}
+		
 		public function dashboardPanelOptions($context) {
 			if ($context['type'] != 'section_to_table') return;
 			
 			$config = $context['existing_config'];
-			
+			$sm = new SectionManager(Symphony::Engine());
+			$section_selected = (
+				isset($config['section'])
+					? $config['section']
+					: null
+			);
+			$columns_selected = (
+				isset($config['columns'])
+					? $config['columns']
+					: array()
+			);
+
 			$fieldset = new XMLElement('fieldset');
 			$fieldset->setAttribute('class', 'settings');
 			$fieldset->appendChild(
 				new XMLElement('legend', __('Section to Table'))
 			);
-			
+
 			$label = Widget::Label(__('Section'));
-			$select = Widget::Select(
-				'config[section]',
-				$this->getSectionOptions(
-					isset($config['section'])
-						? $config['section']
-						: null
-				)
-			);
+			$select = new XMLElement('select');
+			$select->setAttribute('name', 'config[section]');
+
+			// Section options:
+			foreach ($sm->fetch() as $section) {
+				$option = new XMLElement('option');
+				$option->setAttribute('value', $section->get('id'));
+				$option->setValue($section->get('name'));
+				
+				if ($section_selected == $section->get('id')) {
+					$option->setAttribute('selected', 'selected');
+				}
+
+				$select->appendChild($option);
+			}
+
 			$label->appendChild($select);
+
+			if (isset($context['errors']['section'])) {
+				$label = Widget::wrapFormElementWithError($label, $context['errors']['section']);
+			}
+
 			$fieldset->appendChild($label);
-			
-			$input = Widget::Input(
-				'config[columns]',
-				(
-					isset($config['columns'])
-						? $config['columns']
-						: null
-				)
-			);
-			$input->setAttribute('type', 'number');
-			$input->setAttribute('size', '3');
-			$label = Widget::Label(__(
-				'Show the first %s columns in table.',
-				array($input->generate())
-			));
+
+			$label = Widget::Label(__('Show Columns'));
 			$fieldset->appendChild($label);
+
+			// Section contexts:
+			foreach ($sm->fetch() as $section) {
+				$div = new XMLElement('div');
+				$div->setAttribute('data-section-context', $section->get('id'));
+
+				$select = new XMLElement('select');
+				$select->setAttribute('name', 'config[columns][]');
+				$select->setAttribute('multiple', 'multiple');
+
+				foreach ($section->fetchFields() as $field) {
+					$option = new XMLElement('option');
+					$option->setAttribute('value', $field->get('id'));
+					$option->setValue($field->get('label'));
+					
+					if (in_array($field->get('id'), $columns_selected)) {
+						$option->setAttribute('selected', 'selected');
+					}
+
+					$select->appendChild($option);
+				}
+
+				$fieldset->appendChild($select);
+				$fieldset->appendChild($div);
+			}
 			
 			$input = Widget::Input(
 				'config[entries]',
@@ -193,19 +240,16 @@
 			$context['types']['section_to_table'] = __('Section to Table');
 		}
 		
-		public function getSectionOptions($selected_id = null) {
-			$sm = new SectionManager(Symphony::Engine());
-			$options = array();
+		public function getSectionOption(Section $section, $selected_id = null) {
+			return array(
+				$section->get('id'),
+				$selected_id == $section->get('id'),
+				$section->get('name')
+			);
+		}
+
+		public function getFieldOptions(Section $section, array $selected_ids = array()) {
 			
-			foreach ($sm->fetch() as $section) {
-				$options[] = array(
-					$section->get('id'),
-					$selected_id == $section->get('id'),
-					$section->get('name')
-				);
-			}
-			
-			return $options;
 		}
 	}
 	
