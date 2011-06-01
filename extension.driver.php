@@ -109,8 +109,8 @@
 			$config = $context['config'];
 			$panel = $context['panel'];
 			$panel->setAttribute('class', 'panel-inner datasource_to_table');
-			$em = new EntryManager();
-			$sm = new SectionManager();
+			$em = new EntryManager(Symphony::Engine());
+			$sm = new SectionManager(Symphony::Engine());
 			
 			// Get section information:
 			$section = $sm->fetch($config['section']);
@@ -194,7 +194,7 @@
 		}
 		
 		public function getSectionOptions($selected_id = null) {
-			$sm = new SectionManager();
+			$sm = new SectionManager(Symphony::Engine());
 			$options = array();
 			
 			foreach ($sm->fetch() as $section) {
