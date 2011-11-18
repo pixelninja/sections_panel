@@ -1,9 +1,12 @@
 <?php
-	
+
 	/**
 	 * @package sections_panel
 	 */
-	
+
+	require_once TOOLKIT . '/class.entrymanager.php';
+	require_once TOOLKIT . '/class.sectionmanager.php';
+
 	/**
 	 * Add sections directly to the dashboard, skipping the datasource step.
 	 */
@@ -24,9 +27,14 @@
 				'description'	=> 'Add sections directly to the dashboard, skipping the datasource step.'
 			);
 		}
-		
+
 		public function getSubscribedDelegates() {
 			return array(
+				array(
+					'page'		=> '/backend/',
+					'delegate'	=> 'InitaliseAdminPageHead',
+					'callback'	=> 'dashboardAppendAssets'
+				),
 				array(
 					'page'		=> '/backend/',
 					'delegate'	=> 'DashboardPanelValidate',
@@ -49,16 +57,22 @@
 				)
 			);
 		}
-		
+
+		public function dashboardAppendAssets($context) {
+			$page = $context['parent']->Page;
+			$page->addStylesheetToHead(URL . '/extensions/sections_panel/assets/panel.css', 'screen', 666);
+			$page->addScriptToHead(URL . '/extensions/sections_panel/assets/panel.js', 667);
+		}
+
 		public function dashboardPanelValidate($context) {
 			if ($context['type'] != 'section_to_table') return;
 
 			//$context['errors']['section'] = __('Invalid section.');
 		}
-		
+
 		public function dashboardPanelOptions($context) {
 			if ($context['type'] != 'section_to_table') return;
-			
+
 			$config = $context['existing_config'];
 			$sm = new SectionManager(Symphony::Engine());
 			$section_selected = (
@@ -87,7 +101,7 @@
 				$option = new XMLElement('option');
 				$option->setAttribute('value', $section->get('id'));
 				$option->setValue($section->get('name'));
-				
+
 				if ($section_selected == $section->get('id')) {
 					$option->setAttribute('selected', 'selected');
 				}
@@ -110,6 +124,7 @@
 			foreach ($sm->fetch() as $section) {
 				$div = new XMLElement('div');
 				$div->setAttribute('data-section-context', $section->get('id'));
+				$div->setAttribute('style', 'display: none;');
 
 				$select = new XMLElement('select');
 				$select->setAttribute('name', 'config[columns][]');
@@ -119,18 +134,19 @@
 					$option = new XMLElement('option');
 					$option->setAttribute('value', $field->get('id'));
 					$option->setValue($field->get('label'));
-					
+
 					if (in_array($field->get('id'), $columns_selected)) {
 						$option->setAttribute('selected', 'selected');
+						$div->setAttribute('style', 'display: block;');
 					}
 
 					$select->appendChild($option);
 				}
 
-				$fieldset->appendChild($select);
+				$div->appendChild($select);
 				$fieldset->appendChild($div);
 			}
-			
+
 			$input = Widget::Input(
 				'config[entries]',
 				(
@@ -146,18 +162,18 @@
 				array($input->generate())
 			));
 			$fieldset->appendChild($label);
-			
+
 			$context['form'] = $fieldset;
 		}
-		
+
 		public function dashboardPanelRender($context) {
 			if ($context['type'] != 'section_to_table') return;
-			
+
 			$config = $context['config'];
 			$panel = $context['panel'];
 			$em = new EntryManager(Symphony::Engine());
 			$sm = new SectionManager(Symphony::Engine());
-			
+
 			// Get section information:
 			$section = $sm->fetch($config['section']);
 			$fields = $section->fetchFields();
@@ -165,16 +181,16 @@
 				'%s/publish/%s/',
 				SYMPHONY_URL, $section->get('handle')
 			);
-			
+
 			// Get entry information:
-			$entries = $em->fetchByPage(1, $section->get('id'), 
+			$entries = $em->fetchByPage(1, $section->get('id'),
 				(
 					isset($config['entries'])
 						? $config['entries']
 						: 4
 				)
 			);
-			
+
 			// Build table:
 			$table = new XMLElement('table');
 			$table->setAttribute('class', 'skinny');
@@ -183,11 +199,11 @@
 			$table_body = new XMLElement('tbody');
 			$table->appendChild($table_body);
 			$panel->appendChild($table);
-			
+
 			// Add table headers:
 			$row = new XMLElement('tr');
 			$table_head->appendChild($row);
-			
+
 			foreach ($fields as $field) {
 				if (!in_array($field->get('id'), $config['columns'])) continue;
 
@@ -195,47 +211,47 @@
 				$cell->setValue($field->get('label'));
 				$row->appendChild($cell);
 			}
-			
+
 			// Add table body:
 			foreach ($entries['records'] as $entry) {
 				$row = new XMLElement('tr');
 				$table_body->appendChild($row);
 				$entry_url = $section_url . 'edit/' . $entry->get('id') . '/';
-				
+
 				foreach ($fields as $position => $field) {
 					if (!in_array($field->get('id'), $config['columns'])) continue;
 
 					$data = $entry->getData($field->get('id'));
 					$cell = new XMLElement('td');
 					$row->appendChild($cell);
-					
+
 					$link = (
 						$position === 0
 							? Widget::Anchor(__('None'), $entry_url, $entry->get('id'), 'content')
 							: null
 					);
 					$value = $field->prepareTableValue($data, $link, $entry->get('id'));
-					
+
 					if (isset($link)) {
 						$value = $link->generate();
 					}
-					
+
 					if ($value == 'None' || strlen($value) === 0) {
 						$cell->setAttribute('class', 'inactive');
 						$cell->setValue(__('None'));
 					}
-					
+
 					else {
 						$cell->setValue($value);
 					}
 				}
 			}
 		}
-		
+
 		public function dashboardPanelTypes($context) {
 			$context['types']['section_to_table'] = __('Section to Table');
 		}
-		
+
 		public function getSectionOption(Section $section, $selected_id = null) {
 			return array(
 				$section->get('id'),
@@ -245,8 +261,8 @@
 		}
 
 		public function getFieldOptions(Section $section, array $selected_ids = array()) {
-			
+
 		}
 	}
-	
+
 ?>
