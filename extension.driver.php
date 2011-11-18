@@ -17,28 +17,26 @@
 		public function about() {
 			return array(
 				'name'			=> 'Sections Panel',
-				'version'		=> '0.1',
-				'release-date'	=> '2011-06-01',
+				'version'		=> '1.0',
+				'release-date'	=> '2011-11-18',
 				'author'		=> array(
 					'name'			=> 'Rowan Lewis',
 					'website'		=> 'http://rowanlewis.com/',
 					'email'			=> 'me@rowanlewis.com'
 				),
-				'description'	=> 'Add sections directly to the dashboard, skipping the datasource step.'
+				'description'	=> 'Add sections directly to the dashboard, without having to create a separate datasource, or any datasource at all.'
 			);
 		}
 
+		/**
+		 * Subscribe to Dashboard and Symphony delegates.
+		 */
 		public function getSubscribedDelegates() {
 			return array(
 				array(
 					'page'		=> '/backend/',
 					'delegate'	=> 'InitaliseAdminPageHead',
 					'callback'	=> 'dashboardAppendAssets'
-				),
-				array(
-					'page'		=> '/backend/',
-					'delegate'	=> 'DashboardPanelValidate',
-					'callback'	=> 'dashboardPanelValidate'
 				),
 				array(
 					'page'		=> '/backend/',
@@ -58,18 +56,25 @@
 			);
 		}
 
+		/**
+		 * Append CSS and javaScript assets to the dashboard page.
+		 *
+		 * @param array $context
+		 */
 		public function dashboardAppendAssets($context) {
 			$page = $context['parent']->Page;
-			$page->addStylesheetToHead(URL . '/extensions/sections_panel/assets/panel.css', 'screen', 666);
-			$page->addScriptToHead(URL . '/extensions/sections_panel/assets/panel.js', 667);
+
+			if ($page instanceof contentExtensionDashboardIndex) {
+				$page->addStylesheetToHead(URL . '/extensions/sections_panel/assets/panel.css', 'screen', 666);
+				$page->addScriptToHead(URL . '/extensions/sections_panel/assets/panel.js', 667);
+			}
 		}
 
-		public function dashboardPanelValidate($context) {
-			if ($context['type'] != 'section_to_table') return;
-
-			//$context['errors']['section'] = __('Invalid section.');
-		}
-
+		/**
+		 * Generate the panel options view.
+		 *
+		 * @param array $context
+		 */
 		public function dashboardPanelOptions($context) {
 			if ($context['type'] != 'section_to_table') return;
 
@@ -119,6 +124,7 @@
 
 			$label = Widget::Label(__('Show Columns'));
 			$fieldset->appendChild($label);
+			$current_context = null;
 
 			// Section contexts:
 			foreach ($sm->fetch() as $section) {
@@ -130,6 +136,10 @@
 				$select->setAttribute('name', 'config[columns][]');
 				$select->setAttribute('multiple', 'multiple');
 
+				if (isset($first_select) === false) {
+					$current_context = $div;
+				}
+
 				foreach ($section->fetchFields() as $field) {
 					$option = new XMLElement('option');
 					$option->setAttribute('value', $field->get('id'));
@@ -137,7 +147,7 @@
 
 					if (in_array($field->get('id'), $columns_selected)) {
 						$option->setAttribute('selected', 'selected');
-						$div->setAttribute('style', 'display: block;');
+						$current_context = $div;
 					}
 
 					$select->appendChild($option);
@@ -147,12 +157,17 @@
 				$fieldset->appendChild($div);
 			}
 
+			// Show the first/currently selected section:
+			if ($current_context) {
+				$current_context->setAttribute('style', 'display: block;');
+			}
+
 			$input = Widget::Input(
 				'config[entries]',
 				(
 					isset($config['entries'])
 						? $config['entries']
-						: null
+						: 5
 				)
 			);
 			$input->setAttribute('type', 'number');
@@ -166,6 +181,11 @@
 			$context['form'] = $fieldset;
 		}
 
+		/**
+		 * Generate the panel view.
+		 *
+		 * @param array $context
+		 */
 		public function dashboardPanelRender($context) {
 			if ($context['type'] != 'section_to_table') return;
 
@@ -248,20 +268,26 @@
 			}
 		}
 
+		/**
+		 * Let the Dashboard know that our panel type exists.
+		 *
+		 * @param array $context
+		 */
 		public function dashboardPanelTypes($context) {
 			$context['types']['section_to_table'] = __('Section to Table');
 		}
 
+		/**
+		 * Generate a list of available sections for use in the Widget::Select function.
+		 *
+		 * @param array $context
+		 */
 		public function getSectionOption(Section $section, $selected_id = null) {
 			return array(
 				$section->get('id'),
 				$selected_id == $section->get('id'),
 				$section->get('name')
 			);
-		}
-
-		public function getFieldOptions(Section $section, array $selected_ids = array()) {
-
 		}
 	}
 

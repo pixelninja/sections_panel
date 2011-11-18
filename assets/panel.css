@@ -1,4 +1,8 @@
-div[data-section-context] {
-	margin-bottom: 1.5em;
-	margin-top: -1.5em;
-}
+/* @group Sections Panel */
+
+	div[data-section-context] {
+		margin-bottom: 1.5em;
+		margin-top: -1.5em;
+	}
+
+/* @end */

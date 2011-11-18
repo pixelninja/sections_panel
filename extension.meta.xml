@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension id="sections_panel">
+	<name>Sections Panel</name>
+	<description>Add sections directly to the dashboard, without having to create a separate datasource, or any datasource at all.</description>
+	<repo type="github">https://github.com/rowan-lewis/sections_panel</repo>
+	<types>
+		<type>Dashboard Panel</type>
+	</types>
+	<authors>
+		<author>
+			<name github="rowan-lewis" symphony="buzzomatic">Rowan Lewis</name>
+			<website>http://nbsp.io/</website>
+		</author>
+	</authors>
+	<releases>
+		<release version="0.3" date="2011-06-09" min="2.2" />
+	</releases>
+	<dependencies>
+		<dependency version="1.5.1">dashboard</dependency>
+	</dependencies>
+</extension>
